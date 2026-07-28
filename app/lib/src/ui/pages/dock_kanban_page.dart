@@ -62,19 +62,13 @@ class _DockKanbanPageState extends ConsumerState<DockKanbanPage> {
         error: (e, _) => Center(child: Text('道口加载失败: $e')),
       ),
       floatingActionButton: activeSessionAsync.when(
-        data: (session) => session == null
-            ? FloatingActionButton.extended(
-                onPressed: () => context.push(
-                    '/change?warehouseId=${widget.warehouseId}'),
-                icon: const Icon(Icons.edit_note),
-                label: const Text('开始变更'),
-              )
-            : FloatingActionButton.extended(
-                onPressed: () => context.push(
-                    '/change?warehouseId=${widget.warehouseId}'),
-                icon: const Icon(Icons.edit),
-                label: const Text('继续变更'),
-              ),
+        data: (session) => FloatingActionButton.small(
+          heroTag: 'change_fab',
+          tooltip: session == null ? '开始变更' : '继续变更',
+          onPressed: () => context.push(
+              '/change?warehouseId=${widget.warehouseId}'),
+          child: Icon(session == null ? Icons.edit_note : Icons.edit),
+        ),
         loading: () => const SizedBox.shrink(),
         error: (_, __) => const SizedBox.shrink(),
       ),
@@ -90,7 +84,9 @@ class _DockKanbanPageState extends ConsumerState<DockKanbanPage> {
         padding: const EdgeInsets.all(8),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 1.2,
+          childAspectRatio: 0.85,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
         ),
         itemCount: docks.length,
         itemBuilder: (context, index) {
@@ -101,6 +97,7 @@ class _DockKanbanPageState extends ConsumerState<DockKanbanPage> {
                 ? batchMap[dock.currentBatchId]
                 : null,
             compact: _compact,
+            isGrid: true,
             onTap: () => _onDockTap(dock, batchMap[dock.currentBatchId]),
           );
         },
