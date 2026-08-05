@@ -1,7 +1,7 @@
 name: dock_batch_change_tracker
 description: "Dock & Batch Change Tracker - local-first warehouse dock and batch management."
 publish_to: 'none'
-version: 1.0.1+2
+version: 1.0.2+3
 
 environment:
   sdk: ^3.5.3

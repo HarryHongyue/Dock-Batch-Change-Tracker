@@ -21,14 +21,14 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   }
 
   Future<void> _navigate() async {
-    await Future.delayed(const Duration(seconds: 1));
-
     final settings = await ref.read(settingsProvider.future);
     final isFirstRun = settings.isFirstRun;
 
     if (!mounted) return;
 
     if (isFirstRun) {
+      await Future.delayed(const Duration(seconds: 1));
+      if (!mounted) return;
       context.go('/onboarding');
       return;
     }
@@ -43,7 +43,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
     final currentId = settings.currentWarehouseId;
     if (currentId != null && warehouses.any((w) => w.id == currentId)) {
-      context.go('/kanban?warehouseId=$currentId');
+      context.go('/kanban?warehouseId=' + currentId);
     } else {
       context.go('/warehouses');
     }

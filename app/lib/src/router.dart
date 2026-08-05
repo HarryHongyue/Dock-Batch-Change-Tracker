@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'ui/pages/batch_detail_page.dart';
-import 'ui/pages/change_mode_page.dart';
 import 'ui/pages/daily_record_page.dart';
 import 'ui/pages/dock_detail_page.dart';
 import 'ui/pages/dock_kanban_page.dart';
@@ -33,12 +32,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/kanban',
         builder: (context, state) => DockKanbanPage(
-          warehouseId: state.uri.queryParameters['warehouseId'] ?? '',
-        ),
-      ),
-      GoRoute(
-        path: '/change',
-        builder: (context, state) => ChangeModePage(
           warehouseId: state.uri.queryParameters['warehouseId'] ?? '',
         ),
       ),
@@ -76,7 +69,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(
-        child: Text('路由未找到: ${state.uri}'),
+        child: Text('路由未找到: ' + state.uri.toString()),
       ),
     ),
   );

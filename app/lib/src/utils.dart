@@ -10,6 +10,11 @@ String formatDateTime(DateTime? dt, {String pattern = 'yyyy-MM-dd HH:mm'}) {
   return DateFormat(pattern).format(dt);
 }
 
+String formatShortDateTime(DateTime? dt) {
+  if (dt == null) return '-';
+  return DateFormat('yyyy.MM.dd HH:mm').format(dt);
+}
+
 String formatTime(DateTime? dt, {bool hour24 = true}) {
   if (dt == null) return '-';
   final pattern = hour24 ? 'HH:mm' : 'hh:mm a';
@@ -25,7 +30,7 @@ String displayBatchCode(String code, {int? maxLength}) {
   if (maxLength == null || code.length <= maxLength) return code;
   final prefix = code.substring(0, (maxLength / 2).ceil());
   final suffix = code.substring(code.length - (maxLength / 2).floor());
-  return '$prefix…$suffix';
+  return prefix + '…' + suffix;
 }
 
 String? emptyToNull(String value) => value.trim().isEmpty ? null : value.trim();

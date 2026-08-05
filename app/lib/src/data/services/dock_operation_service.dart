@@ -174,34 +174,6 @@ class DockOperationService {
     );
   }
 
-  Future<ChangeEventModel> swapBatches({
-    required String sessionId,
-    required String warehouseId,
-    required String sourceDockId,
-    required String targetDockId,
-    String? note,
-  }) async {
-    final source = await _docks.getById(sourceDockId);
-    final target = await _docks.getById(targetDockId);
-    if (source == null || target == null) throw ArgumentError('道口不存在');
-
-    return addEvent(
-      ChangeEventModel(
-        id: generateId(),
-        sessionId: sessionId,
-        warehouseId: warehouseId,
-        eventType: EventType.batchesSwapped,
-        sourceDockId: sourceDockId,
-        targetDockId: targetDockId,
-        previousBatchId: source.currentBatchId,
-        newBatchId: target.currentBatchId,
-        previousDockStatus: source.currentStatus,
-        newDockStatus: target.currentStatus,
-        note: note,
-      ),
-    );
-  }
-
   Future<ChangeEventModel> createAndAssignBatch({
     required String sessionId,
     required String warehouseId,
@@ -330,6 +302,201 @@ class DockOperationService {
       ),
     );
   }
+
+
+  Future<void> moveBatchDirect({
+    required String warehouseId,
+    required String sourceDockId,
+    required String targetDockId,
+    String? note,
+  }) async {
+    final source = await _docks.getById(sourceDockId);
+    final target = await _docks.getById(targetDockId);
+    if (source == null || target == null) throw ArgumentError('道口不存在');
+    if (source.warehouseId != warehouseId || target.warehouseId != warehouseId) {
+      throw ArgumentError('道口不属于同一仓库');
+    }
+    final actualBatchId = source.currentBatchId;
+    if (actualBatchId == null) throw StateError('源道口没有批次');
+    if (targetDockId == sourceDockId) throw StateError('源道口和目标道口相同');
+    if (target.currentBatchId != null && target.currentBatchId != actualBatchId) {
+      throw DockOccupiedException(target.name, target.currentBatchId!);
+    }
+
+    final batch = await _batches.getById(actualBatchId);
+    if (batch == null) throw ArgumentError('批次不存在');
+
+    final now = DateTime.now();
+    await _docks.update(
+      source.copyWith(
+        currentBatchId: null,
+        currentStatus: source.currentStatus == DockStatus.active
+            ? DockStatus.empty
+            : source.currentStatus,
+        updatedAt: now,
+      ),
+    );
+    await _docks.update(
+      target.copyWith(
+        currentBatchId: actualBatchId,
+        currentStatus: target.currentStatus == DockStatus.empty
+            ? DockStatus.active
+            : target.currentStatus,
+        updatedAt: now,
+      ),
+    );
+    await _batches.update(batch.copyWith(updatedAt: now));
+
+    final sourceNote = note ?? ('批次 ' + batch.batchCode + ' 移动到 ' + target.name);
+    await _events.insert(
+      ChangeEventModel(
+        id: generateId(),
+        sessionId: '',
+        warehouseId: warehouseId,
+        eventType: EventType.batchMoved,
+        batchId: actualBatchId,
+        sourceDockId: sourceDockId,
+        targetDockId: targetDockId,
+        previousDockStatus: source.currentStatus,
+        newDockStatus: DockStatus.empty,
+        previousBatchId: target.currentBatchId,
+        newBatchId: actualBatchId,
+        note: sourceNote,
+        eventTime: now,
+      ),
+    );
+    await _events.insert(
+      ChangeEventModel(
+        id: generateId(),
+        sessionId: '',
+        warehouseId: warehouseId,
+        eventType: EventType.batchMoved,
+        batchId: actualBatchId,
+        sourceDockId: sourceDockId,
+        targetDockId: targetDockId,
+        previousDockStatus: target.currentStatus,
+        newDockStatus: target.currentStatus == DockStatus.empty
+            ? DockStatus.active
+            : target.currentStatus,
+        previousBatchId: target.currentBatchId,
+        newBatchId: actualBatchId,
+        note: '从 ' + source.name + ' 接收批次 ' + batch.batchCode,
+        eventTime: now,
+      ),
+    );
+  }
+
+  Future<BatchModel> modifyBatchDirect({
+    required String warehouseId,
+    required String dockId,
+    required String batchCode,
+    String? displayName,
+    String? description,
+    String? note,
+  }) async {
+    final dock = await _docks.getById(dockId);
+    if (dock == null) throw ArgumentError('道口不存在');
+    if (dock.warehouseId != warehouseId) throw ArgumentError('道口不属于该仓库');
+
+    final oldBatch = dock.currentBatchId != null
+        ? await _batches.getById(dock.currentBatchId!)
+        : null;
+    final now = DateTime.now();
+
+    if (oldBatch != null) {
+      await _batches.update(
+        oldBatch.copyWith(
+          isArchived: true,
+          status: BatchStatus.completed,
+          completedAt: now,
+          updatedAt: now,
+        ),
+      );
+    }
+
+    final newBatch = BatchModel(
+      id: generateId(),
+      warehouseId: warehouseId,
+      batchCode: batchCode,
+      displayName: displayName,
+      description: description,
+      status: BatchStatus.active,
+      startedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    );
+    await _batches.insert(newBatch);
+
+    await _docks.update(
+      dock.copyWith(
+        currentBatchId: newBatch.id,
+        currentStatus: DockStatus.active,
+        updatedAt: now,
+      ),
+    );
+
+    await _events.insert(
+      ChangeEventModel(
+        id: generateId(),
+        sessionId: '',
+        warehouseId: warehouseId,
+        eventType: EventType.batchModified,
+        batchId: oldBatch?.id ?? newBatch.id,
+        sourceDockId: dockId,
+        targetDockId: dockId,
+        previousBatchId: oldBatch?.id,
+        newBatchId: newBatch.id,
+        note: note ?? (oldBatch != null
+            ? ('批次由 ' + oldBatch.batchCode + ' 改为 ' + newBatch.batchCode + '，旧批次已归档')
+            : ('新增批次 ' + newBatch.batchCode)),
+        eventTime: now,
+      ),
+    );
+
+    return newBatch;
+  }
+
+  Future<void> changeDockStatusDirect({
+    required String warehouseId,
+    required String dockId,
+    required DockStatus newStatus,
+    String? note,
+  }) async {
+    final dock = await _docks.getById(dockId);
+    if (dock == null) throw ArgumentError('道口不存在');
+
+    final now = DateTime.now();
+    await _docks.update(
+      dock.copyWith(
+        currentStatus: newStatus,
+        updatedAt: now,
+      ),
+    );
+
+    final eventType = newStatus == DockStatus.paused
+        ? EventType.dockPaused
+        : (dock.currentStatus == DockStatus.paused &&
+                newStatus == DockStatus.active
+            ? EventType.dockResumed
+            : EventType.statusChanged);
+
+    await _events.insert(
+      ChangeEventModel(
+        id: generateId(),
+        sessionId: '',
+        warehouseId: warehouseId,
+        eventType: eventType,
+        targetDockId: dockId,
+        previousDockStatus: dock.currentStatus,
+        newDockStatus: newStatus,
+        note: note ?? (newStatus == DockStatus.paused
+            ? (dock.name + ' 已暂停')
+            : (dock.name + ' 已恢复')),
+        eventTime: now,
+      ),
+    );
+  }
+
 
   Future<ChangeSessionModel> correctEvent({
     required String warehouseId,
@@ -592,6 +759,10 @@ class DockOperationService {
           batchStates[event.batchId!] =
               batchStates[event.batchId!]!.copyWith(status: BatchStatus.active);
         }
+        break;
+      case EventType.batchModified:
+      case EventType.batchReceived:
+      case EventType.statusChanged:
         break;
       case EventType.manualNote:
         break;

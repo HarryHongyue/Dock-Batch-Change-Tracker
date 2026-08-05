@@ -27,11 +27,34 @@ class WarehouseListPage extends ConsumerWidget {
       body: warehousesAsync.when(
         data: (warehouses) => _buildList(context, ref, warehouses),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('加载失败: $e')),
+        error: (e, _) => Center(child: Text('加载失败: ' + e.toString())),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/onboarding'),
-        child: const Icon(Icons.add),
+      floatingActionButton: GestureDetector(
+        onTap: () => context.push('/onboarding'),
+        child: Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.white.withOpacity(0.35),
+                offset: const Offset(-5, -5),
+                blurRadius: 10,
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.25),
+                offset: const Offset(5, 5),
+                blurRadius: 10,
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.add,
+            color: Colors.white,
+          ),
+        ),
       ),
     );
   }
@@ -48,12 +71,12 @@ class WarehouseListPage extends ConsumerWidget {
         return ListTile(
           leading: const CircleAvatar(child: Icon(Icons.warehouse)),
           title: Text(w.name),
-          subtitle: Text('更新于: ${formatDateTime(w.updatedAt)}'),
+          subtitle: Text('更新于: ' + formatDateTime(w.updatedAt)),
           onTap: () async {
             final settings = await ref.read(settingsProvider.future);
             await settings.setCurrentWarehouse(w.id);
             if (context.mounted) {
-              context.go('/kanban?warehouseId=${w.id}');
+              context.go('/kanban?warehouseId=' + w.id);
             }
           },
         );

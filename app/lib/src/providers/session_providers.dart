@@ -23,3 +23,15 @@ final sessionListProvider = FutureProvider.autoDispose
   final db = await ref.watch(databaseProvider.future);
   return ChangeSessionRepository(db).getByWarehouseId(warehouseId);
 });
+
+final dockEventsProvider = FutureProvider.autoDispose
+    .family<List<ChangeEventModel>, String>((ref, dockId) async {
+  final db = await ref.watch(databaseProvider.future);
+  return ChangeEventRepository(db).getByDockId(dockId);
+});
+
+final warehouseEventsProvider = FutureProvider.autoDispose
+    .family<List<ChangeEventModel>, String>((ref, warehouseId) async {
+  final db = await ref.watch(databaseProvider.future);
+  return ChangeEventRepository(db).getByWarehouseId(warehouseId);
+});

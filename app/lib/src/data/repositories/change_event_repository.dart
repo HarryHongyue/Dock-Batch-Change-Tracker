@@ -16,6 +16,23 @@ class ChangeEventRepository {
     return rows.map(_toModel).toList();
   }
 
+  Future<List<ChangeEventModel>> getByWarehouseId(String warehouseId) async {
+    final rows = await (db.select(db.changeEvents)
+          ..where((t) => t.warehouseId.equals(warehouseId))
+          ..orderBy([(t) => OrderingTerm.desc(t.eventTime)]))
+        .get();
+    return rows.map(_toModel).toList();
+  }
+
+  Future<List<ChangeEventModel>> getByDockId(String dockId) async {
+    final rows = await (db.select(db.changeEvents)
+          ..where((t) =>
+              t.sourceDockId.equals(dockId) | t.targetDockId.equals(dockId))
+          ..orderBy([(t) => OrderingTerm.desc(t.eventTime)]))
+        .get();
+    return rows.map(_toModel).toList();
+  }
+
   Future<ChangeEventModel?> getById(String id) async {
     final row =
         await (db.select(db.changeEvents)..where((t) => t.id.equals(id)))

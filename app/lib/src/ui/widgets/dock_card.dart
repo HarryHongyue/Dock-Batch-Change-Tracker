@@ -1,12 +1,11 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../../data/models/batch_model.dart';
 import '../../data/models/dock_model.dart';
 import '../../data/models/enums.dart';
 import '../../utils.dart';
-class DockCard extends StatelessWidget {
+
+class DockCard extends StatefulWidget {
   final DockModel dock;
   final BatchModel? batch;
   final VoidCallback? onTap;
@@ -25,90 +24,98 @@ class DockCard extends StatelessWidget {
   });
 
   @override
+  State<DockCard> createState() => _DockCardState();
+}
+
+class _DockCardState extends State<DockCard> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isCompact = compact || isGrid;
+    final isCompact = widget.compact || widget.isGrid;
 
     final statusColor = _statusColor(colorScheme);
-    final statusLabel = _statusLabel(dock.currentStatus);
+    final statusLabel = _statusLabel(widget.dock.currentStatus);
 
-    final batchCode = batch?.batchCode ?? '';
+    final batchCode = widget.batch?.batchCode ?? '';
     final display = batchCode.isEmpty
         ? '-'
         : displayBatchCode(batchCode, maxLength: isCompact ? 10 : 18);
 
     return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: _backgroundColor(colorScheme),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: statusColor.withOpacity(0.35),
-                width: 1.2,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: () {
+        setState(() => _pressed = false);
+        widget.onTap?.call();
+      },
+      onLongPress: widget.onLongPress,
+      child: Container(
+        margin: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _backgroundColor(colorScheme, theme),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: statusColor.withOpacity(0.35),
+            width: 1.2,
+          ),
+          boxShadow: _neumorphicShadows(context, _pressed),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        dock.name,
-                        style: (isCompact
-                                ? theme.textTheme.labelLarge
-                                : theme.textTheme.titleMedium)
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    _StatusChip(
-                      label: statusLabel,
-                      color: statusColor,
-                      isCompact: isCompact,
-                    ),
-                  ],
-                ),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
+                Expanded(
                   child: Text(
-                    display,
+                    widget.dock.name,
                     style: (isCompact
-                            ? theme.textTheme.titleMedium
-                            : theme.textTheme.titleLarge)
-                        ?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.onSurface,
-                    ),
+                            ? theme.textTheme.labelLarge
+                            : theme.textTheme.titleMedium)
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (batch != null && !isCompact)
-                  Text(
-                    '进入: ${formatTime(batch!.startedAt)}',
-                    style: theme.textTheme.bodySmall,
-                  ),
+                _StatusChip(
+                  label: statusLabel,
+                  color: statusColor,
+                  isCompact: isCompact,
+                ),
               ],
             ),
-          ),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                display,
+                style: (isCompact
+                        ? theme.textTheme.titleMedium
+                        : theme.textTheme.titleLarge)
+                    ?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ),
+            if (widget.batch != null && !isCompact)
+              Text(
+                '进入: ' + formatShortDateTime(widget.batch!.startedAt),
+                style: theme.textTheme.bodySmall,
+              ),
+          ],
         ),
       ),
     );
   }
 
   Color _statusColor(ColorScheme scheme) {
-    switch (dock.currentStatus) {
+    switch (widget.dock.currentStatus) {
       case DockStatus.active:
         return const Color(0xFF38BDF8);
       case DockStatus.paused:
@@ -124,15 +131,15 @@ class DockCard extends StatelessWidget {
     }
   }
 
-  Color _backgroundColor(ColorScheme scheme) {
-    final base = dock.currentStatus == DockStatus.paused
+  Color _backgroundColor(ColorScheme scheme, ThemeData theme) {
+    final base = widget.dock.currentStatus == DockStatus.paused
         ? scheme.tertiaryContainer
-        : scheme.surfaceContainer;
-    return base.withOpacity(0.45);
+        : theme.scaffoldBackgroundColor;
+    return base;
   }
 
   String _statusLabel(DockStatus s) {
-    if (s == DockStatus.paused) return '暂停';
+    if (s == DockStatus.paused) return 'B';
     switch (s) {
       case DockStatus.active:
         return '作业';
@@ -147,6 +154,40 @@ class DockCard extends StatelessWidget {
       default:
         return s.name;
     }
+  }
+
+  List<BoxShadow> _neumorphicShadows(BuildContext context, bool pressed) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final offset = pressed ? 3.0 : 6.0;
+    final blur = pressed ? 6.0 : 12.0;
+
+    if (isDark) {
+      return [
+        BoxShadow(
+          color: const Color(0xFF4A5278).withOpacity(pressed ? 0.2 : 0.4),
+          offset: Offset(-offset, -offset),
+          blurRadius: blur,
+        ),
+        BoxShadow(
+          color: Colors.black.withOpacity(pressed ? 0.35 : 0.55),
+          offset: Offset(offset, offset),
+          blurRadius: blur,
+        ),
+      ];
+    }
+
+    return [
+      BoxShadow(
+        color: Colors.white.withOpacity(pressed ? 0.55 : 0.9),
+        offset: Offset(-offset, -offset),
+        blurRadius: blur,
+      ),
+      BoxShadow(
+        color: Colors.black.withOpacity(pressed ? 0.08 : 0.16),
+        offset: Offset(offset, offset),
+        blurRadius: blur,
+      ),
+    ];
   }
 }
 

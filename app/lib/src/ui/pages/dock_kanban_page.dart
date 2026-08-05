@@ -6,7 +6,6 @@ import '../../data/models/batch_model.dart';
 import '../../data/models/dock_model.dart';
 import '../../providers/batch_providers.dart';
 import '../../providers/dock_providers.dart';
-import '../../providers/session_providers.dart';
 import '../widgets/dock_card.dart';
 import 'quick_actions_sheet.dart';
 
@@ -27,8 +26,6 @@ class _DockKanbanPageState extends ConsumerState<DockKanbanPage> {
   Widget build(BuildContext context) {
     final docksAsync = ref.watch(dockListProvider(widget.warehouseId));
     final batchesAsync = ref.watch(batchListProvider(widget.warehouseId));
-    final activeSessionAsync =
-        ref.watch(activeSessionProvider(widget.warehouseId));
 
     return Scaffold(
       appBar: AppBar(
@@ -56,21 +53,10 @@ class _DockKanbanPageState extends ConsumerState<DockKanbanPage> {
         data: (docks) => batchesAsync.when(
           data: (batches) => _buildBody(context, docks, batches),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('批次加载失败: $e')),
+          error: (e, _) => Center(child: Text('批次加载失败: ' + e.toString())),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('道口加载失败: $e')),
-      ),
-      floatingActionButton: activeSessionAsync.when(
-        data: (session) => FloatingActionButton.small(
-          heroTag: 'change_fab',
-          tooltip: session == null ? '开始变更' : '继续变更',
-          onPressed: () => context.push(
-              '/change?warehouseId=${widget.warehouseId}'),
-          child: Icon(session == null ? Icons.edit_note : Icons.edit),
-        ),
-        loading: () => const SizedBox.shrink(),
-        error: (_, __) => const SizedBox.shrink(),
+        error: (e, _) => Center(child: Text('道口加载失败: ' + e.toString())),
       ),
     );
   }
@@ -81,12 +67,12 @@ class _DockKanbanPageState extends ConsumerState<DockKanbanPage> {
 
     if (_grid && docks.length <= 8) {
       return GridView.builder(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(16),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           childAspectRatio: 0.85,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
         ),
         itemCount: docks.length,
         itemBuilder: (context, index) {
@@ -105,7 +91,7 @@ class _DockKanbanPageState extends ConsumerState<DockKanbanPage> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(16),
       itemCount: docks.length,
       itemBuilder: (context, index) {
         final dock = docks[index];

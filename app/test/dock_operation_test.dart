@@ -92,32 +92,6 @@ void main() {
       expect(updatedTarget?.currentBatchId, isNotNull);
     });
 
-    test('两个批次交换道口', () async {
-      await _createBatchAndAssign(
-          warehouse.id, dockList[0].id, '2101', batches, docks);
-      await _createBatchAndAssign(
-          warehouse.id, dockList[1].id, '2201', batches, docks);
-
-      final first = await docks.getById(dockList[0].id);
-      final second = await docks.getById(dockList[1].id);
-
-      final session = await ops.startChangeSession(
-        warehouseId: warehouse.id,
-        title: '交换测试',
-      );
-
-      await ops.swapBatches(
-        sessionId: session.id,
-        warehouseId: warehouse.id,
-        sourceDockId: dockList[0].id,
-        targetDockId: dockList[1].id,
-      );
-
-      final updatedSource = await docks.getById(dockList[0].id);
-      final updatedTarget = await docks.getById(dockList[1].id);
-      expect(updatedSource?.currentBatchId, second?.currentBatchId);
-      expect(updatedTarget?.currentBatchId, first?.currentBatchId);
-    });
 
     test('目标道口已有批次时移动失败', () async {
       await _createBatchAndAssign(

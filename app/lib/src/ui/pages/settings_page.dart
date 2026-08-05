@@ -29,7 +29,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       body: settingsAsync.when(
         data: (settings) => _buildBody(context, settings),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('加载失败: $e')),
+        error: (e, _) => Center(child: Text('加载失败: ' + e.toString())),
       ),
     );
   }
@@ -91,17 +91,54 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: FilledButton.icon(
-            onPressed: () => _importJson(context),
-            icon: const Icon(Icons.file_download),
-            label: const Text('导入 JSON'),
+          child: GestureDetector(
+            onTap: () => _importJson(context),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.35),
+                    offset: const Offset(-6, -6),
+                    blurRadius: 12,
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.25),
+                    offset: const Offset(6, 6),
+                    blurRadius: 12,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.file_download,
+                    color: Theme.of(context).colorScheme.onPrimary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '导入 JSON',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
         const Divider(),
         const ListTile(
           leading: Icon(Icons.info),
           title: Text('关于'),
-          subtitle: Text('${AppConstants.appNameCn} v${AppConstants.appVersion}'),
+          subtitle: Text(AppConstants.appNameCn + ' v' + AppConstants.appVersion),
         ),
       ],
     );
@@ -120,7 +157,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('载入失败: $e')),
+          SnackBar(content: Text('载入失败: ' + e.toString())),
         );
       }
     }
@@ -134,7 +171,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导出失败: $e')),
+          SnackBar(content: Text('导出失败: ' + e.toString())),
         );
       }
     }
@@ -148,7 +185,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导出失败: $e')),
+          SnackBar(content: Text('导出失败: ' + e.toString())),
         );
       }
     }
@@ -171,13 +208,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       _refresh();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已导入 $count 条记录')),
+          SnackBar(content: Text('已导入 ' + count.toString() + ' 条记录')),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导入失败: $e')),
+          SnackBar(content: Text('导入失败: ' + e.toString())),
         );
       }
     }

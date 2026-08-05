@@ -47,7 +47,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   void _generateControllers() {
     while (_dockNameControllers.length < _dockCount) {
       final n = _dockNameControllers.length + 1;
-      _dockNameControllers.add(TextEditingController(text: '$n号道口'));
+      _dockNameControllers.add(TextEditingController(text: '' + n.toString() + '号道口'));
       _batchCodeControllers.add(TextEditingController());
     }
     while (_dockNameControllers.length > _dockCount) {
@@ -84,7 +84,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   items: [6, 8, 10, 12]
                       .map((e) => DropdownMenuItem(
                             value: e,
-                            child: Text('$e'),
+                            child: Text(e.toString()),
                           ))
                       .toList(),
                   onChanged: (v) {
@@ -134,18 +134,46 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: FilledButton(
-                onPressed: _saving ? null : _save,
-                child: _saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+              child: GestureDetector(
+                onTap: _saving ? null : _save,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.35),
+                        offset: const Offset(-6, -6),
+                        blurRadius: 12,
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.25),
+                        offset: const Offset(6, 6),
+                        blurRadius: 12,
+                      ),
+                    ],
+                  ),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          '创建仓库并开始使用',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      )
-                    : const Text('创建仓库并开始使用'),
+                ),
               ),
             ),
           ],
@@ -172,7 +200,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       for (var i = 0; i < _dockCount; i++) {
         final dockId = generateId();
         final dockName = _dockNameControllers[i].text.trim().isEmpty
-            ? '${i + 1}号道口'
+            ? '' + (i + 1).toString() + '号道口'
             : _dockNameControllers[i].text.trim();
         final code = _batchCodeControllers[i].text.trim();
 
@@ -208,13 +236,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       await settings.setCurrentWarehouse(warehouse.id);
 
       if (mounted) {
-        context.go('/kanban?warehouseId=${warehouse.id}');
+        context.go('/kanban?warehouseId=' + warehouse.id);
       }
     } catch (e, st) {
-      debugPrint('创建仓库失败: $e\n$st');
+      debugPrint('创建仓库失败: ' + e.toString() + '\n' + st.toString());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('创建失败: $e')),
+          SnackBar(content: Text('创建失败: ' + e.toString())),
         );
       }
     } finally {

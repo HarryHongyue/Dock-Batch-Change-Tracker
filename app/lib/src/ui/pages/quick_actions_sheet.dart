@@ -4,11 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../data/models/batch_model.dart';
 import '../../data/models/dock_model.dart';
+import '../../data/models/enums.dart';
 import '../../data/services/dock_operation_service.dart';
 import '../../providers/batch_providers.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/dock_providers.dart';
-import '../../providers/session_providers.dart';
+import '../../utils.dart';
 
 class QuickActionsSheet extends ConsumerWidget {
   final String warehouseId;
@@ -24,8 +25,6 @@ class QuickActionsSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeSessionAsync = ref.watch(activeSessionProvider(warehouseId));
-
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -38,13 +37,13 @@ class QuickActionsSheet extends ConsumerWidget {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             if (batch != null)
-              Text('当前批次: ${batch!.batchCode}')
+              Text('当前批次: ' + batch!.batchCode)
             else
               const Text('当前无批次'),
             const SizedBox(height: 16),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 12,
+              runSpacing: 12,
               children: [
                 _ActionChip(
                   icon: Icons.move_up,
@@ -52,19 +51,9 @@ class QuickActionsSheet extends ConsumerWidget {
                   onTap: () => _move(context, ref),
                 ),
                 _ActionChip(
-                  icon: Icons.swap_horiz,
-                  label: '交换',
-                  onTap: () => _swap(context, ref),
-                ),
-                _ActionChip(
-                  icon: Icons.add,
-                  label: '新增批次',
-                  onTap: () => _createBatch(context, ref),
-                ),
-                _ActionChip(
-                  icon: Icons.check,
-                  label: '完成',
-                  onTap: () => _complete(context, ref),
+                  icon: Icons.edit,
+                  label: '修改批次',
+                  onTap: () => _modifyBatch(context, ref),
                 ),
                 _ActionChip(
                   icon: Icons.pause,
@@ -81,131 +70,120 @@ class QuickActionsSheet extends ConsumerWidget {
                   label: '历史',
                   onTap: () {
                     context.pop();
-                    context.push('/dock/${dock.id}');
+                    context.push('/dock/' + dock.id);
                   },
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            if (activeSessionAsync.valueOrNull != null)
-              ListTile(
-                leading: const Icon(Icons.edit_note),
-                title: const Text('进入变更模式'),
-                onTap: () {
-                  context.pop();
-                  context.push('/change?warehouseId=$warehouseId');
-                },
-              ),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _withSession(BuildContext context, WidgetRef ref,
-      Future<void> Function(DockOperationService, String) action) async {
-    try {
-      final db = await ref.read(databaseProvider.future);
-      final ops = DockOperationService(db);
-      var sessionId = ref.read(activeSessionProvider(warehouseId)).valueOrNull?.id;
-      sessionId ??= (await ops.startChangeSession(
-        warehouseId: warehouseId,
-        title: '快速操作',
-      )).id;
-      await action(ops, sessionId);
-      await ops.commitSession(sessionId: sessionId);
-      if (context.mounted) {
-        context.pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('操作已保存')),
-        );
-        ref.invalidate(dockListProvider(warehouseId));
-        ref.invalidate(batchListProvider(warehouseId));
-        ref.invalidate(activeSessionProvider(warehouseId));
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('操作失败: $e')),
-        );
-      }
-    }
-  }
-
   Future<void> _move(BuildContext context, WidgetRef ref) async {
     final target = await _selectDock(context, ref, exclude: dock.id);
     if (target == null || !context.mounted) return;
-    await _withSession(context, ref, (ops, sessionId) async {
-      await ops.moveBatch(
-        sessionId: sessionId,
+    try {
+      final db = await ref.read(databaseProvider.future);
+      final ops = DockOperationService(db);
+      await ops.moveBatchDirect(
         warehouseId: warehouseId,
         sourceDockId: dock.id,
         targetDockId: target.id,
       );
-    });
-  }
-
-  Future<void> _swap(BuildContext context, WidgetRef ref) async {
-    final target = await _selectDock(context, ref, exclude: dock.id);
-    if (target == null || !context.mounted) return;
-    await _withSession(context, ref, (ops, sessionId) async {
-      await ops.swapBatches(
-        sessionId: sessionId,
-        warehouseId: warehouseId,
-        sourceDockId: dock.id,
-        targetDockId: target.id,
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('移动成功')),
       );
-    });
+      context.pop();
+      ref.invalidate(dockListProvider(warehouseId));
+      ref.invalidate(batchListProvider(warehouseId));
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('移动失败: ' + e.toString())),
+        );
+      }
+    }
   }
 
-  Future<void> _createBatch(BuildContext context, WidgetRef ref) async {
-    final code = await _inputDialog(context, '新增批次', '批次编号');
+  Future<void> _modifyBatch(BuildContext context, WidgetRef ref) async {
+    final code = await _inputDialog(context, '修改批次', '新批次编号');
     if (code == null || code.isEmpty || !context.mounted) return;
-    await _withSession(context, ref, (ops, sessionId) async {
-      await ops.createAndAssignBatch(
-        sessionId: sessionId,
+    try {
+      final db = await ref.read(databaseProvider.future);
+      final ops = DockOperationService(db);
+      final newBatch = await ops.modifyBatchDirect(
         warehouseId: warehouseId,
-        targetDockId: dock.id,
+        dockId: dock.id,
         batchCode: code,
       );
-    });
-  }
-
-  Future<void> _complete(BuildContext context, WidgetRef ref) async {
-    if (batch == null) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('当前道口没有批次')),
+        SnackBar(
+          content: Text(
+              '已改为 ' + newBatch.batchCode + '（修改时间：' + formatShortDateTime(DateTime.now()) + '）'),
+        ),
       );
-      return;
+      context.pop();
+      ref.invalidate(dockListProvider(warehouseId));
+      ref.invalidate(batchListProvider(warehouseId));
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('修改失败: ' + e.toString())),
+        );
+      }
     }
-    await _withSession(context, ref, (ops, sessionId) async {
-      await ops.completeBatch(
-        sessionId: sessionId,
-        warehouseId: warehouseId,
-        batchId: batch!.id,
-        dockId: dock.id,
-      );
-    });
   }
 
   Future<void> _pause(BuildContext context, WidgetRef ref) async {
-    await _withSession(context, ref, (ops, sessionId) async {
-      await ops.pauseDock(
-        sessionId: sessionId,
+    try {
+      final db = await ref.read(databaseProvider.future);
+      final ops = DockOperationService(db);
+      await ops.changeDockStatusDirect(
         warehouseId: warehouseId,
         dockId: dock.id,
+        newStatus: DockStatus.paused,
       );
-    });
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('道口已暂停')),
+      );
+      context.pop();
+      ref.invalidate(dockListProvider(warehouseId));
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('暂停失败: ' + e.toString())),
+        );
+      }
+    }
   }
 
   Future<void> _resume(BuildContext context, WidgetRef ref) async {
-    await _withSession(context, ref, (ops, sessionId) async {
-      await ops.resumeDock(
-        sessionId: sessionId,
+    try {
+      final db = await ref.read(databaseProvider.future);
+      final ops = DockOperationService(db);
+      await ops.changeDockStatusDirect(
         warehouseId: warehouseId,
         dockId: dock.id,
+        newStatus: DockStatus.active,
       );
-    });
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('道口已恢复')),
+      );
+      context.pop();
+      ref.invalidate(dockListProvider(warehouseId));
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('恢复失败: ' + e.toString())),
+        );
+      }
+    }
   }
 
   Future<DockModel?> _selectDock(
@@ -220,7 +198,7 @@ class QuickActionsSheet extends ConsumerWidget {
         children: choices
             .map((d) => SimpleDialogOption(
                   onPressed: () => Navigator.pop(context, d),
-                  child: Text('${d.name} (${d.currentBatchId != null ? '有批次' : '空闲'})'),
+                  child: Text(d.name + '（' + (d.currentBatchId != null ? '有批次' : '空闲') + '）'),
                 ))
             .toList(),
       ),
@@ -240,13 +218,20 @@ class QuickActionsSheet extends ConsumerWidget {
           autofocus: true,
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('确定'),
+          OverflowBar(
+            alignment: MainAxisAlignment.end,
+            spacing: 8,
+            children: [
+              _NeumorphicButton(
+                label: '取消',
+                onTap: () => Navigator.pop(context),
+              ),
+              _NeumorphicButton(
+                label: '确定',
+                filled: true,
+                onTap: () => Navigator.pop(context, controller.text.trim()),
+              ),
+            ],
           ),
         ],
       ),
@@ -267,10 +252,108 @@ class _ActionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ActionChip(
-      avatar: Icon(icon, size: 18),
-      label: Text(label),
-      onPressed: onTap,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 76,
+        height: 76,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF15182A) : const Color(0xFFF5F7FF),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? const Color(0xFF4A5278).withOpacity(0.35)
+                  : Colors.white.withOpacity(0.85),
+              offset: const Offset(-5, -5),
+              blurRadius: 10,
+            ),
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withOpacity(0.45)
+                  : Colors.black.withOpacity(0.12),
+              offset: const Offset(5, 5),
+              blurRadius: 10,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 26, color: colorScheme.primary),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NeumorphicButton extends StatelessWidget {
+  final String label;
+  final bool filled;
+  final VoidCallback onTap;
+
+  const _NeumorphicButton({
+    required this.label,
+    required this.onTap,
+    this.filled = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+    final background = filled
+        ? colorScheme.primary
+        : (isDark ? const Color(0xFF15182A) : const Color(0xFFF5F7FF));
+    final foreground = filled ? colorScheme.onPrimary : colorScheme.onSurface;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? const Color(0xFF4A5278).withOpacity(0.35)
+                  : Colors.white.withOpacity(0.85),
+              offset: const Offset(-5, -5),
+              blurRadius: 10,
+            ),
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withOpacity(0.45)
+                  : Colors.black.withOpacity(0.12),
+              offset: const Offset(5, 5),
+              blurRadius: 10,
+            ),
+          ],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: foreground,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 }
