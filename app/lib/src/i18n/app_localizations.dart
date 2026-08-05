@@ -127,11 +127,15 @@ class AppLocalizations {
       'loadFailed': '加载失败',
       'importFailed': '导入失败',
       'exportFailed': '导出失败',
-      'seedFailed': '载入失败',
       'fileNotFound': '文件不存在',
       'recordsImported': '已导入 {0} 条记录',
-      'testDataLoaded': '测试数据已载入',
       'invalidCount': '输入无效，按 0 处理',
+      'warehouseEmptyHint': '暂无仓库，请点击 + 创建',
+      'addWarehouse': '添加仓库',
+      'warehouseAdded': '仓库已添加',
+      'warehouseDeleted': '仓库已删除',
+      'deleteSelectedWarehouses': '删除选中的仓库（{0} 个）',
+      'warehousesDeleted': '已删除 {0} 个仓库',
       'batchCreatedPattern': '在 {0} 创建批次 {1}',
       'batchMovedPattern': '批次 {0} 移动到 {1}',
       'batchReceivedPattern': '从 {0} 接收批次 {1}',
@@ -238,11 +242,15 @@ class AppLocalizations {
       'loadFailed': 'Load failed',
       'importFailed': 'Import failed',
       'exportFailed': 'Export failed',
-      'seedFailed': 'Seed failed',
       'fileNotFound': 'File not found',
       'recordsImported': 'Imported {0} records',
-      'testDataLoaded': 'Test data loaded',
       'invalidCount': 'Invalid input, treated as 0',
+      'warehouseEmptyHint': 'No warehouses yet, tap + to create',
+      'addWarehouse': 'Add warehouse',
+      'warehouseAdded': 'Warehouse added',
+      'warehouseDeleted': 'Warehouse deleted',
+      'deleteSelectedWarehouses': 'Delete selected warehouses ({0})',
+      'warehousesDeleted': 'Deleted {0} warehouses',
       'batchCreatedPattern': 'Batch {1} created at {0}',
       'batchMovedPattern': 'Batch {0} moved to {1}',
       'batchReceivedPattern': 'Received batch {1} from {0}',
@@ -360,12 +368,18 @@ class AppLocalizations {
   String get loadFailed => _t('loadFailed');
   String get importFailed => _t('importFailed');
   String get exportFailed => _t('exportFailed');
-  String get seedFailed => _t('seedFailed');
   String get fileNotFound => _t('fileNotFound');
-  String get testDataLoaded => _t('testDataLoaded');
   String get invalidCount => _t('invalidCount');
+  String get warehouseEmptyHint => _t('warehouseEmptyHint');
+  String get addWarehouse => _t('addWarehouse');
+  String get warehouseAdded => _t('warehouseAdded');
+  String get warehouseDeleted => _t('warehouseDeleted');
 
   String recordsImported(int count) => _format('recordsImported', [count]);
+
+  String deleteSelected(int count) => _format('deleteSelectedWarehouses', [count]);
+
+  String warehousesDeleted(int count) => _format('warehousesDeleted', [count]);
 
   String batchCreatedMsg(String dockName, String batchCode) =>
       _format('batchCreatedPattern', [dockName, batchCode]);

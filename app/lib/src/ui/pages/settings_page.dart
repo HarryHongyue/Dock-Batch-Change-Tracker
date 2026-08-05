@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../constants.dart';
 import '../../i18n/app_localizations.dart';
 import '../../data/services/export_service.dart';
-import '../../data/services/seed_service.dart';
+
 import '../../providers/database_provider.dart';
 import '../../providers/settings_provider.dart';
 
@@ -78,12 +78,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           leading: const Icon(Icons.account_balance),
           title: Text(l.warehouseList),
           onTap: () => context.push('/warehouses'),
-        ),
-        ListTile(
-          leading: const Icon(Icons.science),
-          title: Text(l.seedFailed),
-          subtitle: const Text('Maastricht'),
-          onTap: () => _seed(context, l),
         ),
         const Divider(),
         ListTile(
@@ -168,25 +162,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ),
       ],
     );
-  }
-
-  Future<void> _seed(BuildContext context, AppLocalizations l) async {
-    try {
-      final db = await ref.read(databaseProvider.future);
-      await SeedService(db).seed();
-      _refresh();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.testDataLoaded)),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.seedFailed)),
-        );
-      }
-    }
   }
 
   Future<void> _exportJson(BuildContext context, AppLocalizations l) async {
