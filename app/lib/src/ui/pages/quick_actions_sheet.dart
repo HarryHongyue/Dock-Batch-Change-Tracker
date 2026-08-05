@@ -37,7 +37,7 @@ class QuickActionsSheet extends ConsumerWidget {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             if (batch != null)
-              Text('当前批次: ' + batch!.batchCode)
+              Text('当前批次: ${batch!.batchCode}')
             else
               const Text('当前无批次'),
             const SizedBox(height: 16),
@@ -70,7 +70,7 @@ class QuickActionsSheet extends ConsumerWidget {
                   label: '历史',
                   onTap: () {
                     context.pop();
-                    context.push('/dock/' + dock.id);
+                    context.push('/dock/${dock.id}');
                   },
                 ),
               ],
@@ -102,7 +102,7 @@ class QuickActionsSheet extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('移动失败: ' + e.toString())),
+          SnackBar(content: Text('移动失败: $e')),
         );
       }
     }
@@ -123,7 +123,7 @@ class QuickActionsSheet extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              '已改为 ' + newBatch.batchCode + '（修改时间：' + formatShortDateTime(DateTime.now()) + '）'),
+              '已改为 ${newBatch.batchCode}（修改时间：${formatShortDateTime(DateTime.now())}）'),
         ),
       );
       context.pop();
@@ -132,7 +132,7 @@ class QuickActionsSheet extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('修改失败: ' + e.toString())),
+          SnackBar(content: Text('修改失败: $e')),
         );
       }
     }
@@ -156,7 +156,7 @@ class QuickActionsSheet extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('暂停失败: ' + e.toString())),
+          SnackBar(content: Text('暂停失败: $e')),
         );
       }
     }
@@ -180,7 +180,7 @@ class QuickActionsSheet extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('恢复失败: ' + e.toString())),
+          SnackBar(content: Text('恢复失败: $e')),
         );
       }
     }
@@ -198,7 +198,7 @@ class QuickActionsSheet extends ConsumerWidget {
         children: choices
             .map((d) => SimpleDialogOption(
                   onPressed: () => Navigator.pop(context, d),
-                  child: Text(d.name + '（' + (d.currentBatchId != null ? '有批次' : '空闲') + '）'),
+                  child: Text('${d.name}（${d.currentBatchId != null ? '有批次' : '空闲'}）'),
                 ))
             .toList(),
       ),

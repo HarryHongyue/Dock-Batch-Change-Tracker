@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/batch_model.dart';
 import '../../data/models/dock_model.dart';
 import '../../data/models/enums.dart';
+import '../../i18n/app_localizations.dart';
 import '../../utils.dart';
 
 class DockCard extends StatefulWidget {
@@ -12,6 +13,7 @@ class DockCard extends StatefulWidget {
   final VoidCallback? onLongPress;
   final bool compact;
   final bool isGrid;
+  final bool isSelected;
 
   const DockCard({
     super.key,
@@ -21,6 +23,7 @@ class DockCard extends StatefulWidget {
     this.onLongPress,
     this.compact = false,
     this.isGrid = false,
+    this.isSelected = false,
   });
 
   @override
@@ -35,9 +38,10 @@ class _DockCardState extends State<DockCard> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isCompact = widget.compact || widget.isGrid;
+    final l = AppLocalizations.of(context);
 
     final statusColor = _statusColor(colorScheme);
-    final statusLabel = _statusLabel(widget.dock.currentStatus);
+    final statusLabel = l.dockStatusLabel(widget.dock.currentStatus);
 
     final batchCode = widget.batch?.batchCode ?? '';
     final display = batchCode.isEmpty
@@ -56,11 +60,15 @@ class _DockCardState extends State<DockCard> {
         margin: const EdgeInsets.all(10),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: _backgroundColor(colorScheme, theme),
+          color: widget.isSelected
+              ? colorScheme.primaryContainer.withOpacity(0.45)
+              : _backgroundColor(colorScheme, theme),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: statusColor.withOpacity(0.35),
-            width: 1.2,
+            color: widget.isSelected
+                ? colorScheme.primary
+                : statusColor.withOpacity(0.35),
+            width: widget.isSelected ? 2.5 : 1.2,
           ),
           boxShadow: _neumorphicShadows(context, _pressed),
         ),
@@ -105,7 +113,7 @@ class _DockCardState extends State<DockCard> {
             ),
             if (widget.batch != null && !isCompact)
               Text(
-                '进入: ' + formatShortDateTime(widget.batch!.startedAt),
+                '进入: ${formatShortDateTime(widget.batch!.startedAt)}',
                 style: theme.textTheme.bodySmall,
               ),
           ],
@@ -136,24 +144,6 @@ class _DockCardState extends State<DockCard> {
         ? scheme.tertiaryContainer
         : theme.scaffoldBackgroundColor;
     return base;
-  }
-
-  String _statusLabel(DockStatus s) {
-    if (s == DockStatus.paused) return 'B';
-    switch (s) {
-      case DockStatus.active:
-        return '作业';
-      case DockStatus.empty:
-        return '空闲';
-      case DockStatus.closed:
-        return '关闭';
-      case DockStatus.blocked:
-        return '阻塞';
-      case DockStatus.maintenance:
-        return '维护';
-      default:
-        return s.name;
-    }
   }
 
   List<BoxShadow> _neumorphicShadows(BuildContext context, bool pressed) {

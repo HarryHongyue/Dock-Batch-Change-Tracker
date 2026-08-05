@@ -27,7 +27,7 @@ class WarehouseListPage extends ConsumerWidget {
       body: warehousesAsync.when(
         data: (warehouses) => _buildList(context, ref, warehouses),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('加载失败: ' + e.toString())),
+        error: (e, _) => Center(child: Text('加载失败: $e')),
       ),
       floatingActionButton: GestureDetector(
         onTap: () => context.push('/onboarding'),
@@ -71,12 +71,12 @@ class WarehouseListPage extends ConsumerWidget {
         return ListTile(
           leading: const CircleAvatar(child: Icon(Icons.warehouse)),
           title: Text(w.name),
-          subtitle: Text('更新于: ' + formatDateTime(w.updatedAt)),
+          subtitle: Text('更新于: ${formatDateTime(w.updatedAt)}'),
           onTap: () async {
             final settings = await ref.read(settingsProvider.future);
             await settings.setCurrentWarehouse(w.id);
             if (context.mounted) {
-              context.go('/kanban?warehouseId=' + w.id);
+              context.go('/kanban?warehouseId=${w.id}');
             }
           },
         );

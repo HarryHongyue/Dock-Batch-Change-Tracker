@@ -30,7 +30,7 @@ String displayBatchCode(String code, {int? maxLength}) {
   if (maxLength == null || code.length <= maxLength) return code;
   final prefix = code.substring(0, (maxLength / 2).ceil());
   final suffix = code.substring(code.length - (maxLength / 2).floor());
-  return prefix + '…' + suffix;
+  return '$prefix…$suffix';
 }
 
 String? emptyToNull(String value) => value.trim().isEmpty ? null : value.trim();

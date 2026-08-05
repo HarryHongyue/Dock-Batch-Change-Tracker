@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/change_event_model.dart';
+import '../../i18n/app_localizations.dart';
 import '../../providers/session_providers.dart';
 import '../../providers/warehouse_providers.dart';
 import '../../utils.dart';
@@ -11,19 +12,20 @@ class TimelinePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     final currentIdAsync = ref.watch(currentWarehouseProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('时间线')),
+      appBar: AppBar(title: Text(l.history)),
       body: currentIdAsync.when(
         data: (currentId) {
           if (currentId == null || currentId.isEmpty) {
-            return const Center(child: Text('请先选择仓库'));
+            return Center(child: Text(l.noData));
           }
           return _TimelineBody(warehouseId: currentId);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('加载失败: ' + e.toString())),
+        error: (e, _) => Center(child: Text(l.loadFailed)),
       ),
     );
   }
@@ -36,18 +38,19 @@ class _TimelineBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     final eventsAsync = ref.watch(warehouseEventsProvider(warehouseId));
 
     return eventsAsync.when(
-      data: (events) => _buildList(context, events),
+      data: (events) => _buildList(context, l, events),
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('加载失败: ' + e.toString())),
+      error: (e, _) => Center(child: Text(l.loadFailed)),
     );
   }
 
-  Widget _buildList(BuildContext context, List<ChangeEventModel> events) {
+  Widget _buildList(BuildContext context, AppLocalizations l, List<ChangeEventModel> events) {
     if (events.isEmpty) {
-      return const Center(child: Text('暂无记录'));
+      return Center(child: Text(l.noData));
     }
 
     return ListView.builder(
@@ -55,7 +58,7 @@ class _TimelineBody extends ConsumerWidget {
       itemBuilder: (context, index) {
         final e = events[index];
         return ListTile(
-          title: Text(e.note ?? e.eventType.name),
+          title: Text(l.eventDisplay(e)),
           subtitle: Text(formatShortDateTime(e.eventTime)),
         );
       },

@@ -347,7 +347,7 @@ class DockOperationService {
     );
     await _batches.update(batch.copyWith(updatedAt: now));
 
-    final sourceNote = note ?? ('批次 ' + batch.batchCode + ' 移动到 ' + target.name);
+    final sourceNote = note ?? ('批次 ${batch.batchCode} 移动到 ${target.name}');
     await _events.insert(
       ChangeEventModel(
         id: generateId(),
@@ -380,7 +380,7 @@ class DockOperationService {
             : target.currentStatus,
         previousBatchId: target.currentBatchId,
         newBatchId: actualBatchId,
-        note: '从 ' + source.name + ' 接收批次 ' + batch.batchCode,
+        note: '从 ${source.name} 接收批次 ${batch.batchCode}',
         eventTime: now,
       ),
     );
@@ -447,8 +447,8 @@ class DockOperationService {
         previousBatchId: oldBatch?.id,
         newBatchId: newBatch.id,
         note: note ?? (oldBatch != null
-            ? ('批次由 ' + oldBatch.batchCode + ' 改为 ' + newBatch.batchCode + '，旧批次已归档')
-            : ('新增批次 ' + newBatch.batchCode)),
+            ? ('批次由 ${oldBatch.batchCode} 改为 ${newBatch.batchCode}，旧批次已归档')
+            : ('新增批次 ${newBatch.batchCode}')),
         eventTime: now,
       ),
     );
@@ -490,8 +490,8 @@ class DockOperationService {
         previousDockStatus: dock.currentStatus,
         newDockStatus: newStatus,
         note: note ?? (newStatus == DockStatus.paused
-            ? (dock.name + ' 已暂停')
-            : (dock.name + ' 已恢复')),
+            ? ('${dock.name} 已暂停')
+            : ('${dock.name} 已恢复')),
         eventTime: now,
       ),
     );

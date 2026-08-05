@@ -69,7 +69,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(
-        child: Text('路由未找到: ' + state.uri.toString()),
+        child: Text('路由未找到: ${state.uri}'),
       ),
     ),
   );

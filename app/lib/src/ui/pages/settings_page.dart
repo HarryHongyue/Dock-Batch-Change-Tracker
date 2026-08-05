@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../constants.dart';
+import '../../i18n/app_localizations.dart';
 import '../../data/services/export_service.dart';
 import '../../data/services/seed_service.dart';
 import '../../providers/database_provider.dart';
@@ -22,24 +23,41 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final settingsAsync = ref.watch(settingsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
+      appBar: AppBar(title: Text(l.settings)),
       body: settingsAsync.when(
-        data: (settings) => _buildBody(context, settings),
+        data: (settings) => _buildBody(context, l, settings),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('加载失败: ' + e.toString())),
+        error: (e, _) => Center(child: Text(l.loadFailed)),
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, SettingsService settings) {
+  Widget _buildBody(BuildContext context, AppLocalizations l, SettingsService settings) {
     return ListView(
       children: [
         ListTile(
+          leading: const Icon(Icons.language),
+          title: Text(l.language),
+          trailing: DropdownButton<Locale>(
+            value: ref.watch(localeProvider).valueOrNull ?? const Locale('zh'),
+            items: const [
+              DropdownMenuItem(value: Locale('zh'), child: Text('简体中文')),
+              DropdownMenuItem(value: Locale('en'), child: Text('English')),
+            ],
+            onChanged: (v) async {
+              if (v == null) return;
+              await setLocale(v.languageCode);
+              ref.invalidate(localeProvider);
+            },
+          ),
+        ),
+        ListTile(
           leading: const Icon(Icons.dark_mode),
-          title: const Text('深色模式'),
+          title: Text(l.theme),
           trailing: DropdownButton<ThemeMode>(
             value: settings.themeMode,
             items: ThemeMode.values
@@ -58,41 +76,41 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         const Divider(),
         ListTile(
           leading: const Icon(Icons.account_balance),
-          title: const Text('仓库管理'),
+          title: Text(l.warehouseList),
           onTap: () => context.push('/warehouses'),
         ),
         ListTile(
           leading: const Icon(Icons.science),
-          title: const Text('载入测试数据'),
-          subtitle: const Text('创建 Maastricht 仓库及示例数据'),
-          onTap: () => _seed(context),
+          title: Text(l.seedFailed),
+          subtitle: const Text('Maastricht'),
+          onTap: () => _seed(context, l),
         ),
         const Divider(),
         ListTile(
           leading: const Icon(Icons.file_upload),
-          title: const Text('导出 JSON 备份'),
-          onTap: () => _exportJson(context),
+          title: Text('JSON ${l.exportFailed}'),
+          onTap: () => _exportJson(context, l),
         ),
         ListTile(
           leading: const Icon(Icons.table_chart),
-          title: const Text('导出 CSV'),
-          onTap: () => _exportCsv(context),
+          title: Text('CSV ${l.exportFailed}'),
+          onTap: () => _exportCsv(context, l),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: TextField(
             controller: _importPathController,
-            decoration: const InputDecoration(
-              labelText: '备份文件路径',
-              hintText: '输入要导入的 JSON 文件完整路径',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l.importFailed,
+              hintText: l.inputDockName,
+              border: const OutlineInputBorder(),
             ),
           ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: GestureDetector(
-            onTap: () => _importJson(context),
+            onTap: () => _importJson(context, l),
             child: Container(
               padding:
                   const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
@@ -122,7 +140,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '导入 JSON',
+                    l.importFailed,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onPrimary,
                       fontSize: 16,
@@ -135,35 +153,43 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
         ),
         const Divider(),
-        const ListTile(
-          leading: Icon(Icons.info),
-          title: Text('关于'),
-          subtitle: Text(AppConstants.appNameCn + ' v' + AppConstants.appVersion),
+        ListTile(
+          leading: const Icon(Icons.info),
+          title: Text(l.about),
+          subtitle: Text.rich(
+            TextSpan(
+              text: l.appNameFull,
+              children: const [
+                TextSpan(text: ' v'),
+                TextSpan(text: AppConstants.appVersion),
+              ],
+            ),
+          ),
         ),
       ],
     );
   }
 
-  Future<void> _seed(BuildContext context) async {
+  Future<void> _seed(BuildContext context, AppLocalizations l) async {
     try {
       final db = await ref.read(databaseProvider.future);
       await SeedService(db).seed();
       _refresh();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('测试数据已载入')),
+          SnackBar(content: Text(l.testDataLoaded)),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('载入失败: ' + e.toString())),
+          SnackBar(content: Text(l.seedFailed)),
         );
       }
     }
   }
 
-  Future<void> _exportJson(BuildContext context) async {
+  Future<void> _exportJson(BuildContext context, AppLocalizations l) async {
     try {
       final db = await ref.read(databaseProvider.future);
       final path = await ExportService(db).exportJson();
@@ -171,13 +197,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导出失败: ' + e.toString())),
+          SnackBar(content: Text(l.exportFailed)),
         );
       }
     }
   }
 
-  Future<void> _exportCsv(BuildContext context) async {
+  Future<void> _exportCsv(BuildContext context, AppLocalizations l) async {
     try {
       final db = await ref.read(databaseProvider.future);
       final paths = await ExportService(db).exportCsv();
@@ -185,19 +211,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导出失败: ' + e.toString())),
+          SnackBar(content: Text(l.exportFailed)),
         );
       }
     }
   }
 
-  Future<void> _importJson(BuildContext context) async {
+  Future<void> _importJson(BuildContext context, AppLocalizations l) async {
     final path = _importPathController.text.trim();
     if (path.isEmpty) return;
     if (!File(path).existsSync()) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('文件不存在')),
+          SnackBar(content: Text(l.fileNotFound)),
         );
       }
       return;
@@ -208,13 +234,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       _refresh();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已导入 ' + count.toString() + ' 条记录')),
+          SnackBar(content: Text(l.recordsImported(count))),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导入失败: ' + e.toString())),
+          SnackBar(content: Text(l.importFailed)),
         );
       }
     }

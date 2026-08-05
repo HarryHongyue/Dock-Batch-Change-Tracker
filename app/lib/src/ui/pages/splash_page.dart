@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../constants.dart';
+import '../../i18n/app_localizations.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/warehouse_providers.dart';
 
@@ -43,7 +43,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
     final currentId = settings.currentWarehouseId;
     if (currentId != null && warehouses.any((w) => w.id == currentId)) {
-      context.go('/kanban?warehouseId=' + currentId);
+      context.go('/kanban?warehouseId=$currentId');
     } else {
       context.go('/warehouses');
     }
@@ -57,7 +57,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              AppConstants.appNameCn,
+              AppLocalizations.of(context).appName,
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 24),

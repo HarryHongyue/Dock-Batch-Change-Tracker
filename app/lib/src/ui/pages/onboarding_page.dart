@@ -9,6 +9,7 @@ import '../../data/models/warehouse_model.dart';
 import '../../data/repositories/batch_repository.dart';
 import '../../data/repositories/dock_repository.dart';
 import '../../data/repositories/warehouse_repository.dart';
+import '../../i18n/app_localizations.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../utils.dart';
@@ -22,7 +23,7 @@ class OnboardingPage extends ConsumerStatefulWidget {
 
 class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   final _nameController = TextEditingController(text: '主仓库');
-  int _dockCount = 6;
+  final _countController = TextEditingController(text: '6');
   final _dockNameControllers = <TextEditingController>[];
   final _batchCodeControllers = <TextEditingController>[];
 
@@ -44,62 +45,62 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     super.dispose();
   }
 
+  int get _dockCount {
+    final v = int.tryParse(_countController.text);
+    if (v == null || v < 0) return 0;
+    return v;
+  }
+
   void _generateControllers() {
-    while (_dockNameControllers.length < _dockCount) {
+    final count = _dockCount;
+    while (_dockNameControllers.length < count) {
       final n = _dockNameControllers.length + 1;
-      _dockNameControllers.add(TextEditingController(text: '' + n.toString() + '号道口'));
+      _dockNameControllers.add(TextEditingController(text: '$n号道口'));
       _batchCodeControllers.add(TextEditingController());
     }
-    while (_dockNameControllers.length > _dockCount) {
+    while (_dockNameControllers.length > count) {
       _dockNameControllers.removeLast().dispose();
       _batchCodeControllers.removeLast().dispose();
     }
   }
 
+  void _onCountChanged(String value) {
+    final v = int.tryParse(value);
+    if (v != null && v < 0) {
+      final l = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.countCannotBeNegative)),
+      );
+      _countController.text = '0';
+    }
+    setState(() => _generateControllers());
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('初始化向导')),
+      appBar: AppBar(title: Text(l.createWarehouse)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('创建第一个仓库', style: Theme.of(context).textTheme.headlineSmall),
+            Text(l.createWarehouse, style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 16),
-            TextField(
+            _NeumorphicTextField(
               controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: '仓库名称',
-                border: OutlineInputBorder(),
-              ),
+              label: l.warehouseName,
             ),
             const SizedBox(height: 24),
-            Row(
-              children: [
-                Text('道口数量:', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(width: 16),
-                DropdownButton<int>(
-                  value: _dockCount,
-                  items: [6, 8, 10, 12]
-                      .map((e) => DropdownMenuItem(
-                            value: e,
-                            child: Text(e.toString()),
-                          ))
-                      .toList(),
-                  onChanged: (v) {
-                    if (v != null) {
-                      setState(() {
-                        _dockCount = v;
-                        _generateControllers();
-                      });
-                    }
-                  },
-                ),
-              ],
+            _NeumorphicTextField(
+              controller: _countController,
+              label: l.dockCount,
+              keyboardType: TextInputType.number,
+              onChanged: _onCountChanged,
             ),
             const SizedBox(height: 16),
-            Text('道口名称与初始批次', style: Theme.of(context).textTheme.titleMedium),
+            Text(l.dockName, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             ...List.generate(_dockCount, (i) {
               return Padding(
@@ -108,23 +109,17 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   children: [
                     Expanded(
                       flex: 2,
-                      child: TextField(
+                      child: _NeumorphicTextField(
                         controller: _dockNameControllers[i],
-                        decoration: const InputDecoration(
-                          labelText: '道口名称',
-                          border: OutlineInputBorder(),
-                        ),
+                        label: l.dockName,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       flex: 3,
-                      child: TextField(
+                      child: _NeumorphicTextField(
                         controller: _batchCodeControllers[i],
-                        decoration: const InputDecoration(
-                          labelText: '初始批次（可为空）',
-                          border: OutlineInputBorder(),
-                        ),
+                        label: l.initialBatch,
                       ),
                     ),
                   ],
@@ -165,7 +160,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                           ),
                         )
                       : Text(
-                          '创建仓库并开始使用',
+                          l.createAndStart,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.onPrimary,
@@ -197,10 +192,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
       await WarehouseRepository(db).insert(warehouse);
 
-      for (var i = 0; i < _dockCount; i++) {
+      for (var i = 0; i < _dockCount; i = i + 1) {
         final dockId = generateId();
         final dockName = _dockNameControllers[i].text.trim().isEmpty
-            ? '' + (i + 1).toString() + '号道口'
+            ? '${i + 1}号道口'
             : _dockNameControllers[i].text.trim();
         final code = _batchCodeControllers[i].text.trim();
 
@@ -236,17 +231,70 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       await settings.setCurrentWarehouse(warehouse.id);
 
       if (mounted) {
-        context.go('/kanban?warehouseId=' + warehouse.id);
+        context.go('/kanban?warehouseId=${warehouse.id}');
       }
     } catch (e, st) {
-      debugPrint('创建仓库失败: ' + e.toString() + '\n' + st.toString());
+      debugPrint(e.toString());
+      debugPrint(st.toString());
       if (mounted) {
+        final l = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('创建失败: ' + e.toString())),
+          SnackBar(content: Text(l.createFailed)),
         );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+}
+
+class _NeumorphicTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final TextInputType? keyboardType;
+  final ValueChanged<String>? onChanged;
+
+  const _NeumorphicTextField({
+    required this.controller,
+    required this.label,
+    this.keyboardType,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? const Color(0xFF4A5278).withOpacity(0.35)
+                : Colors.white.withOpacity(0.85),
+            offset: const Offset(-4, -4),
+            blurRadius: 8,
+          ),
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withOpacity(0.45)
+                : Colors.black.withOpacity(0.12),
+            offset: const Offset(4, 4),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        onChanged: onChanged,
+        decoration: InputDecoration(
+          labelText: label,
+          border: InputBorder.none,
+        ),
+      ),
+    );
   }
 }
