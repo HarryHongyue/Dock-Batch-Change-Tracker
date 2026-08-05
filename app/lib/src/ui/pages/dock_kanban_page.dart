@@ -12,6 +12,7 @@ import '../../providers/database_provider.dart';
 import '../../providers/dock_providers.dart';
 import '../../utils.dart';
 import '../widgets/dock_card.dart';
+import '../widgets/top_message.dart';
 // ignore_for_file: use_build_context_synchronously
 
 import 'quick_actions_sheet.dart';
@@ -202,7 +203,20 @@ class _DockKanbanPageState extends ConsumerState<DockKanbanPage>
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onError),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.delete, color: Colors.white),
+            SizedBox(width: 8),
+            Text(
+              '删除',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
       child: wiggled,
     );
@@ -235,9 +249,7 @@ class _DockKanbanPageState extends ConsumerState<DockKanbanPage>
     await DockRepository(db).deleteOrArchive(dock.id);
     ref.invalidate(dockListProvider(widget.warehouseId));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${dock.name} ${AppLocalizations.of(context).delete}')),
-      );
+      TopMessage.show(context, '${dock.name} ${AppLocalizations.of(context).delete}');
     }
   }
 
@@ -250,9 +262,7 @@ class _DockKanbanPageState extends ConsumerState<DockKanbanPage>
     _setManaging(false);
     ref.invalidate(dockListProvider(widget.warehouseId));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).success)),
-      );
+      TopMessage.show(context, AppLocalizations.of(context).success);
     }
   }
 
@@ -337,15 +347,11 @@ class _DockKanbanPageState extends ConsumerState<DockKanbanPage>
     if (value == null || value.isEmpty || !mounted) return;
     final count = int.tryParse(value);
     if (count == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.pleaseInputNumber)),
-      );
+      TopMessage.show(context, l.pleaseInputNumber, error: true);
       return;
     }
     if (count < 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.countCannotBeNegative)),
-      );
+      TopMessage.show(context, l.countCannotBeNegative, error: true);
       return;
     }
     final db = await ref.read(databaseProvider.future);

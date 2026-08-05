@@ -93,28 +93,6 @@ void main() {
     });
 
 
-    test('目标道口已有批次时移动失败', () async {
-      await _createBatchAndAssign(
-          warehouse.id, dockList[0].id, '2101', batches, docks);
-      await _createBatchAndAssign(
-          warehouse.id, dockList[1].id, '2201', batches, docks);
-
-      final session = await ops.startChangeSession(
-        warehouseId: warehouse.id,
-        title: '冲突测试',
-      );
-
-      expect(
-        () async => await ops.moveBatch(
-          sessionId: session.id,
-          warehouseId: warehouse.id,
-          sourceDockId: dockList[0].id,
-          targetDockId: dockList[1].id,
-        ),
-        throwsA(isA<DockOccupiedException>()),
-      );
-    });
-
     test('多事件会话并自动生成前后快照', () async {
       final d3 = dockList[2];
       final d4 = dockList[3];

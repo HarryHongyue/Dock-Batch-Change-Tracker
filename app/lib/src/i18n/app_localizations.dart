@@ -362,6 +362,7 @@ class AppLocalizations {
   String get modifyFailed => _t('modifyFailed');
   String get dockPausedSnackbar => _t('dockPausedSnackbar');
   String get dockResumedSnackbar => _t('dockResumedSnackbar');
+  String get dockRenamed => _t('dockRenamed');
   String get pauseFailed => _t('pauseFailed');
   String get resumeFailed => _t('resumeFailed');
   String get createFailed => _t('createFailed');

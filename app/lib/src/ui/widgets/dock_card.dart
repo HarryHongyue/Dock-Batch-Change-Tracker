@@ -148,18 +148,18 @@ class _DockCardState extends State<DockCard> {
 
   List<BoxShadow> _neumorphicShadows(BuildContext context, bool pressed) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final offset = pressed ? 3.0 : 6.0;
-    final blur = pressed ? 6.0 : 12.0;
+    final offset = pressed ? 4.0 : 8.0;
+    final blur = pressed ? 8.0 : 16.0;
 
     if (isDark) {
       return [
         BoxShadow(
-          color: const Color(0xFF4A5278).withOpacity(pressed ? 0.2 : 0.4),
+          color: const Color(0xFF4A5278).withOpacity(pressed ? 0.25 : 0.5),
           offset: Offset(-offset, -offset),
           blurRadius: blur,
         ),
         BoxShadow(
-          color: Colors.black.withOpacity(pressed ? 0.35 : 0.55),
+          color: Colors.black.withOpacity(pressed ? 0.4 : 0.65),
           offset: Offset(offset, offset),
           blurRadius: blur,
         ),
@@ -168,12 +168,12 @@ class _DockCardState extends State<DockCard> {
 
     return [
       BoxShadow(
-        color: Colors.white.withOpacity(pressed ? 0.55 : 0.9),
+        color: Colors.white.withOpacity(pressed ? 0.6 : 0.95),
         offset: Offset(-offset, -offset),
         blurRadius: blur,
       ),
       BoxShadow(
-        color: Colors.black.withOpacity(pressed ? 0.08 : 0.16),
+        color: Colors.black.withOpacity(pressed ? 0.1 : 0.22),
         offset: Offset(offset, offset),
         blurRadius: blur,
       ),

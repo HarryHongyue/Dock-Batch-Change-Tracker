@@ -5,11 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../data/models/batch_model.dart';
 import '../../data/models/dock_model.dart';
 import '../../data/models/enums.dart';
+import '../../data/repositories/dock_repository.dart';
 import '../../data/services/dock_operation_service.dart';
+import '../../i18n/app_localizations.dart';
 import '../../providers/batch_providers.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/dock_providers.dart';
-import '../../utils.dart';
+import '../widgets/top_message.dart';
 
 class QuickActionsSheet extends ConsumerWidget {
   final String warehouseId;
@@ -25,6 +27,8 @@ class QuickActionsSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -32,14 +36,25 @@ class QuickActionsSheet extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              dock.name,
-              style: Theme.of(context).textTheme.headlineSmall,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    dock.name,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  tooltip: l.dockRenamed,
+                  onPressed: () => _renameDock(context, ref),
+                ),
+              ],
             ),
             if (batch != null)
-              Text('当前批次: ${batch!.batchCode}')
+              Text('${l.currentBatch}: ${batch!.batchCode}')
             else
-              const Text('当前无批次'),
+              Text(l.noBatch),
             const SizedBox(height: 16),
             Wrap(
               spacing: 12,
@@ -47,27 +62,27 @@ class QuickActionsSheet extends ConsumerWidget {
               children: [
                 _ActionChip(
                   icon: Icons.move_up,
-                  label: '移动',
-                  onTap: () => _move(context, ref),
+                  label: l.move,
+                  onTap: () => _move(context, ref, l),
                 ),
                 _ActionChip(
                   icon: Icons.edit,
-                  label: '修改批次',
-                  onTap: () => _modifyBatch(context, ref),
+                  label: l.modifyBatch,
+                  onTap: () => _modifyBatch(context, ref, l),
                 ),
                 _ActionChip(
                   icon: Icons.pause,
-                  label: '暂停道口',
-                  onTap: () => _pause(context, ref),
+                  label: l.pause,
+                  onTap: () => _pause(context, ref, l),
                 ),
                 _ActionChip(
                   icon: Icons.play_arrow,
-                  label: '恢复道口',
-                  onTap: () => _resume(context, ref),
+                  label: l.resume,
+                  onTap: () => _resume(context, ref, l),
                 ),
                 _ActionChip(
                   icon: Icons.history,
-                  label: '历史',
+                  label: l.history,
                   onTap: () {
                     context.pop();
                     context.push('/dock/${dock.id}');
@@ -81,7 +96,7 @@ class QuickActionsSheet extends ConsumerWidget {
     );
   }
 
-  Future<void> _move(BuildContext context, WidgetRef ref) async {
+  Future<void> _move(BuildContext context, WidgetRef ref, AppLocalizations l) async {
     final target = await _selectDock(context, ref, exclude: dock.id);
     if (target == null || !context.mounted) return;
     try {
@@ -93,23 +108,19 @@ class QuickActionsSheet extends ConsumerWidget {
         targetDockId: target.id,
       );
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('移动成功')),
-      );
+      TopMessage.show(context, l.moveSuccess);
       context.pop();
       ref.invalidate(dockListProvider(warehouseId));
       ref.invalidate(batchListProvider(warehouseId));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('移动失败: $e')),
-        );
+        TopMessage.show(context, '${l.moveFailed}: $e', error: true);
       }
     }
   }
 
-  Future<void> _modifyBatch(BuildContext context, WidgetRef ref) async {
-    final code = await _inputDialog(context, '修改批次', '新批次编号');
+  Future<void> _modifyBatch(BuildContext context, WidgetRef ref, AppLocalizations l) async {
+    final code = await _inputDialog(context, l.modifyBatch, l.batchCode);
     if (code == null || code.isEmpty || !context.mounted) return;
     try {
       final db = await ref.read(databaseProvider.future);
@@ -120,25 +131,21 @@ class QuickActionsSheet extends ConsumerWidget {
         batchCode: code,
       );
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              '已改为 ${newBatch.batchCode}（修改时间：${formatShortDateTime(DateTime.now())}）'),
-        ),
+      TopMessage.show(
+        context,
+        '${l.modifySuccess} ${newBatch.batchCode}',
       );
       context.pop();
       ref.invalidate(dockListProvider(warehouseId));
       ref.invalidate(batchListProvider(warehouseId));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('修改失败: $e')),
-        );
+        TopMessage.show(context, '${l.modifyFailed}: $e', error: true);
       }
     }
   }
 
-  Future<void> _pause(BuildContext context, WidgetRef ref) async {
+  Future<void> _pause(BuildContext context, WidgetRef ref, AppLocalizations l) async {
     try {
       final db = await ref.read(databaseProvider.future);
       final ops = DockOperationService(db);
@@ -148,21 +155,17 @@ class QuickActionsSheet extends ConsumerWidget {
         newStatus: DockStatus.paused,
       );
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('道口已暂停')),
-      );
+      TopMessage.show(context, l.dockPausedSnackbar);
       context.pop();
       ref.invalidate(dockListProvider(warehouseId));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('暂停失败: $e')),
-        );
+        TopMessage.show(context, '${l.pauseFailed}: $e', error: true);
       }
     }
   }
 
-  Future<void> _resume(BuildContext context, WidgetRef ref) async {
+  Future<void> _resume(BuildContext context, WidgetRef ref, AppLocalizations l) async {
     try {
       final db = await ref.read(databaseProvider.future);
       final ops = DockOperationService(db);
@@ -172,34 +175,59 @@ class QuickActionsSheet extends ConsumerWidget {
         newStatus: DockStatus.active,
       );
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('道口已恢复')),
-      );
+      TopMessage.show(context, l.dockResumedSnackbar);
       context.pop();
       ref.invalidate(dockListProvider(warehouseId));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('恢复失败: $e')),
-        );
+        TopMessage.show(context, '${l.resumeFailed}: $e', error: true);
+      }
+    }
+  }
+
+  Future<void> _renameDock(BuildContext context, WidgetRef ref) async {
+    final l = AppLocalizations.of(context);
+    final name = await _inputDialog(context, l.dockRenamed, l.dockName);
+    if (name == null || name.isEmpty || !context.mounted) return;
+    try {
+      final db = await ref.read(databaseProvider.future);
+      await DockRepository(db).update(
+        dock.copyWith(name: name.trim(), updatedAt: DateTime.now()),
+      );
+      if (!context.mounted) return;
+      TopMessage.show(context, l.dockRenamed);
+      context.pop();
+      ref.invalidate(dockListProvider(warehouseId));
+    } catch (e) {
+      if (context.mounted) {
+        TopMessage.show(context, '${l.error}: $e', error: true);
       }
     }
   }
 
   Future<DockModel?> _selectDock(
       BuildContext context, WidgetRef ref, {required String exclude}) async {
+    final l = AppLocalizations.of(context);
     final docks = await ref.read(dockListProvider(warehouseId).future);
+    final batches = await ref.read(batchListProvider(warehouseId).future);
+    final batchMap = {for (final b in batches) b.id: b};
     final choices = docks.where((d) => d.id != exclude).toList();
     if (!context.mounted) return null;
     return showDialog<DockModel>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('选择目标道口'),
+        title: Text(l.selectTargetDock),
         children: choices
-            .map((d) => SimpleDialogOption(
-                  onPressed: () => Navigator.pop(context, d),
-                  child: Text('${d.name}（${d.currentBatchId != null ? '有批次' : '空闲'}）'),
-                ))
+            .map((d) {
+              final b = d.currentBatchId != null ? batchMap[d.currentBatchId] : null;
+              final suffix = b != null
+                  ? '${l.currentBatch}: ${b.batchCode}'
+                  : l.noBatch;
+              return SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, d),
+                child: Text('${d.name}（$suffix）'),
+              );
+            })
             .toList(),
       ),
     );
@@ -207,6 +235,7 @@ class QuickActionsSheet extends ConsumerWidget {
 
   Future<String?> _inputDialog(
       BuildContext context, String title, String label) {
+    final l = AppLocalizations.of(context);
     final controller = TextEditingController();
     return showDialog<String>(
       context: context,
@@ -223,11 +252,11 @@ class QuickActionsSheet extends ConsumerWidget {
             spacing: 8,
             children: [
               _NeumorphicButton(
-                label: '取消',
+                label: l.cancel,
                 onTap: () => Navigator.pop(context),
               ),
               _NeumorphicButton(
-                label: '确定',
+                label: l.ok,
                 filled: true,
                 onTap: () => Navigator.pop(context, controller.text.trim()),
               ),

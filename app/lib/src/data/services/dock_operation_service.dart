@@ -152,10 +152,6 @@ class DockOperationService {
     if (targetDockId == sourceDockId) {
       throw StateError('源道口和目标道口相同');
     }
-    if (target.currentBatchId != null && target.currentBatchId != actualBatchId) {
-      throw DockOccupiedException(target.name, target.currentBatchId!);
-    }
-
     return addEvent(
       ChangeEventModel(
         id: generateId(),
@@ -167,7 +163,7 @@ class DockOperationService {
         targetDockId: targetDockId,
         previousDockStatus: source.currentStatus,
         newDockStatus: target.currentStatus,
-        previousBatchId: target.currentBatchId,
+        previousBatchId: source.currentBatchId,
         newBatchId: actualBatchId,
         note: note,
       ),
@@ -319,14 +315,28 @@ class DockOperationService {
     final actualBatchId = source.currentBatchId;
     if (actualBatchId == null) throw StateError('源道口没有批次');
     if (targetDockId == sourceDockId) throw StateError('源道口和目标道口相同');
-    if (target.currentBatchId != null && target.currentBatchId != actualBatchId) {
-      throw DockOccupiedException(target.name, target.currentBatchId!);
-    }
 
     final batch = await _batches.getById(actualBatchId);
     if (batch == null) throw ArgumentError('批次不存在');
 
+    final oldTargetBatchId = target.currentBatchId;
+    final oldTargetBatch = oldTargetBatchId != null
+        ? await _batches.getById(oldTargetBatchId)
+        : null;
+
     final now = DateTime.now();
+
+    if (oldTargetBatch != null) {
+      await _batches.update(
+        oldTargetBatch.copyWith(
+          status: BatchStatus.completed,
+          isArchived: true,
+          completedAt: now,
+          updatedAt: now,
+        ),
+      );
+    }
+
     await _docks.update(
       source.copyWith(
         currentBatchId: null,
@@ -347,7 +357,10 @@ class DockOperationService {
     );
     await _batches.update(batch.copyWith(updatedAt: now));
 
-    final sourceNote = note ?? ('批次 ${batch.batchCode} 移动到 ${target.name}');
+    final sourceNote = note ??
+        (oldTargetBatch != null
+            ? '批次 ${batch.batchCode} 从 ${source.name} 移动到 ${target.name}，替换原批次 ${oldTargetBatch.batchCode}'
+            : '批次 ${batch.batchCode} 从 ${source.name} 移动到 ${target.name}');
     await _events.insert(
       ChangeEventModel(
         id: generateId(),
@@ -359,8 +372,8 @@ class DockOperationService {
         targetDockId: targetDockId,
         previousDockStatus: source.currentStatus,
         newDockStatus: DockStatus.empty,
-        previousBatchId: target.currentBatchId,
-        newBatchId: actualBatchId,
+        previousBatchId: actualBatchId,
+        newBatchId: null,
         note: sourceNote,
         eventTime: now,
       ),
@@ -378,9 +391,11 @@ class DockOperationService {
         newDockStatus: target.currentStatus == DockStatus.empty
             ? DockStatus.active
             : target.currentStatus,
-        previousBatchId: target.currentBatchId,
+        previousBatchId: oldTargetBatchId,
         newBatchId: actualBatchId,
-        note: '从 ${source.name} 接收批次 ${batch.batchCode}',
+        note: oldTargetBatch != null
+            ? '从 ${source.name} 接收批次 ${batch.batchCode}，替换原批次 ${oldTargetBatch.batchCode}'
+            : '从 ${source.name} 接收批次 ${batch.batchCode}',
         eventTime: now,
       ),
     );
@@ -816,15 +831,6 @@ class DockOperationService {
       }
     }
   }
-}
-
-class DockOccupiedException implements Exception {
-  final String dockName;
-  final String batchId;
-  DockOccupiedException(this.dockName, this.batchId);
-
-  @override
-  String toString() => '目标道口 $dockName 已被批次 $batchId 占用';
 }
 
 class _DockState {
