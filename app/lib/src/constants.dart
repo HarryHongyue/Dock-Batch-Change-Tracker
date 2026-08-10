@@ -2,7 +2,7 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = 'DockFlow Tracker';
-  static const String appVersion = '1.0.5';
+  static const String appVersion = '1.0.6';
   static const String exportVersion = '1.0.0';
 
   static const int defaultDockCount = 6;

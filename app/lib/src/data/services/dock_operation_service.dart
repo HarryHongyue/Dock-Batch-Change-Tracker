@@ -359,8 +359,8 @@ class DockOperationService {
 
     final sourceNote = note ??
         (oldTargetBatch != null
-            ? '批次 ${batch.batchCode} 从 ${source.name} 移动到 ${target.name}，替换原批次 ${oldTargetBatch.batchCode}'
-            : '批次 ${batch.batchCode} 从 ${source.name} 移动到 ${target.name}');
+            ? '批次 ${batch.batchCode} 移动到 ${target.name}，替换原批次 ${oldTargetBatch.batchCode}'
+            : '批次 ${batch.batchCode} 移动到 ${target.name}');
     await _events.insert(
       ChangeEventModel(
         id: generateId(),
@@ -369,7 +369,7 @@ class DockOperationService {
         eventType: EventType.batchMoved,
         batchId: actualBatchId,
         sourceDockId: sourceDockId,
-        targetDockId: targetDockId,
+        targetDockId: null,
         previousDockStatus: source.currentStatus,
         newDockStatus: DockStatus.empty,
         previousBatchId: actualBatchId,
@@ -378,6 +378,9 @@ class DockOperationService {
         eventTime: now,
       ),
     );
+    final targetNote = oldTargetBatch != null
+        ? '从 ${source.name} 接收批次 ${batch.batchCode}，替换原批次 ${oldTargetBatch.batchCode}'
+        : '从 ${source.name} 接收批次 ${batch.batchCode}';
     await _events.insert(
       ChangeEventModel(
         id: generateId(),
@@ -385,7 +388,7 @@ class DockOperationService {
         warehouseId: warehouseId,
         eventType: EventType.batchMoved,
         batchId: actualBatchId,
-        sourceDockId: sourceDockId,
+        sourceDockId: null,
         targetDockId: targetDockId,
         previousDockStatus: target.currentStatus,
         newDockStatus: target.currentStatus == DockStatus.empty
@@ -393,9 +396,7 @@ class DockOperationService {
             : target.currentStatus,
         previousBatchId: oldTargetBatchId,
         newBatchId: actualBatchId,
-        note: oldTargetBatch != null
-            ? '从 ${source.name} 接收批次 ${batch.batchCode}，替换原批次 ${oldTargetBatch.batchCode}'
-            : '从 ${source.name} 接收批次 ${batch.batchCode}',
+        note: targetNote,
         eventTime: now,
       ),
     );
